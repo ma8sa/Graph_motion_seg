@@ -2,7 +2,7 @@
 
 # TO DO:
 - [X] Parse Hopklins155
-- [ ] add gcn code
+- [X] add gcn code
 - [ ] Write dataloader
 - [ ] first run
 - [ ] Train
