@@ -40,8 +40,9 @@ if args.cuda:
 
 # Load data
 adj, features, labels, idx_train, idx_val, idx_test = load_data()
-tt = idx_test 
+tt = features 
 print(tt)
+print(tt[0])
 print(tt.size())
 print(tt.type)
 input()
@@ -69,6 +70,10 @@ def train(epoch):
     model.train()
     optimizer.zero_grad()
     output = model(features, adj)
+    print(output.shape)
+    input()
+    print(labels.shape)
+    input()
     loss_train = F.nll_loss(output[idx_train], labels[idx_train])
     acc_train = accuracy(output[idx_train], labels[idx_train])
     loss_train.backward()
