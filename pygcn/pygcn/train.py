@@ -40,11 +40,10 @@ if args.cuda:
 
 # Load data
 adj, features, labels, idx_train, idx_val, idx_test = load_data()
-tt = features 
+tt = adj 
 print(tt)
-print(tt[0])
 print(tt.size())
-print(tt.type)
+print(tt.type())
 input()
 
 # Model and optimizer

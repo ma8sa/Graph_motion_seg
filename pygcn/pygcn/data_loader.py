@@ -11,6 +11,46 @@ def encode_onehot(labels):
                              dtype=np.int32)
     return labels_onehot
 
+def make_adj(x,y,window,sigma=1.0):
+   
+    n,_ = x.shape
+    ind = [[0,0]]
+    val = [1.0]
+    N = n * window
+    for i in range(N):
+        for j in range(N):
+
+            frame_i = i / n
+            frame_j = j / n
+
+            idx_i = i % n
+            idx_j = j % n
+
+	    # condition for temorapl consistency
+            if idx_i == idx_j:
+               ind.append([i,j])
+               val.append(1.0)
+            elif frame_i == frame_j:
+               # exp(-1* euc_dist(x,y,x,y)/sigma)
+           
+               #tmp = np.exp( ((-1) * euc_dist( )) / sigma )
+               tmp = 0.0 
+               ind.append([i,j])
+               val.append(tmp)
+                
+    ind = torch.LongTensor(ind)
+    val = torch.FloatTensor(val)
+    print(ind.type())
+    print(ind)
+    input()         
+    #adj = torch.zeros([N,N],dtype=torch.float64)
+    adj = torch.sparse.FloatTensor(ind.t(),val,torch.Size([N,N]))
+    print(adj)
+    input()
+    return adj
+    
+    
+
 class HopkinsDataset(Dataset):
 
 
@@ -40,9 +80,10 @@ class HopkinsDataset(Dataset):
           #labels = encode_onehot(gt)
           gt = gt -1
           labels = torch.LongTensor(gt)
+          
+          adj = make_adj(x,y,self.window)
 
           # make adj matrix 
-          # see in which format the data is returend
           # experiment 1 features just has 1 in it
           
-          return x,features,labels
+          return adj,features,labels

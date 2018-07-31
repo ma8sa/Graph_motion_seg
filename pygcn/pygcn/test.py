@@ -8,8 +8,9 @@ loader = HopkinsDataset(window = 3 , root_dir = '../../car_dataset_03/' )
 
 a,b,c = loader[1]
 
-print(b)
-print(b.shape)
+print(a)
+print(a.shape)
+print(a.type())
 input()
 print(c)
 print(c.shape)
