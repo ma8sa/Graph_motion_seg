@@ -74,8 +74,6 @@ def make_adj(x,y,window,sigma=50.0):
     adj = normalize(adj)                
     adj = torch.FloatTensor(adj)
     adj = to_sparse(adj)
-    print(adj)
-    input()
     return adj
     
     
@@ -98,7 +96,7 @@ class HopkinsDataset(Dataset):
 
       def __getitem__(self,idx):
           
-          tmp = np.genfromtxt(self.root_dir + str(idx).zfill(6) + '_.txt')
+          tmp = np.genfromtxt(self.root_dir + str(idx).zfill(6) + '.txt')
           nf , _ = tmp.shape 
           gt = tmp[:,2*self.window] 
           tmp = tmp[:,:2*self.window] 
@@ -106,6 +104,9 @@ class HopkinsDataset(Dataset):
           y = tmp[:,1::2]
 
           features = torch.FloatTensor(np.ones((nf,100)))
+          for _ in range(self.window-2): 
+             features = torch.cat((features,features), 0)
+             gt = np.concatenate((gt,gt),axis=0)
           #labels = encode_onehot(gt)
           gt = gt -1
           labels = torch.LongTensor(gt)

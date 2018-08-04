@@ -4,7 +4,7 @@ import os
 
 
 
-def mat_to_txt(filename,count, window=3  ):
+def mat_to_txt(filename,count,train=True window=3  ):
     
     mat = sio.loadmat(filename)
     
@@ -17,7 +17,10 @@ def mat_to_txt(filename,count, window=3  ):
     print(gt.shape) 
     tmp1 = []
     tmp2 = []
-    folder = 'car_dataset_' + str(window).zfill(2)
+    if train:
+       folder = 'train_dataset_' + str(window).zfill(2)
+    else:
+       folder = 'val_dataset_' + str(window).zfill(2)
     if not(os.path.isdir(folder)):
        os.makedirs(folder)
     
@@ -28,7 +31,7 @@ def mat_to_txt(filename,count, window=3  ):
         tmp[:,0::2] = tmp1
         tmp[:,1::2] = tmp2
         tmp = np.concatenate((tmp,gt),axis=1)
-        np.savetxt(folder + '/' + str(count).zfill(6)+'_.txt',(tmp))
+        np.savetxt(folder + '/' + str(count).zfill(6)+'.txt',(tmp))
         count += 1
         print("count : {}".format(count))
 
@@ -55,9 +58,17 @@ if __name__ == "__main__":
    count = 0;
    
    fl = get_files() 
-   for f in fl:
+   len_data = len(fl)
+   split = int(len_data/4)
+   val = np.random.choice( fl, size=split, replace=False)
+   train = list(set(fl) - set(val)) 
+   
+   for f in train:
       print( " -------------------------- file name {}-------------------".format(f))
       count = mat_to_txt(f,count)
-   
+   count = 0 
+   for f in val:
+      print( " -------------------------- file name {}-------------------".format(f))
+      count = mat_to_txt(f,count,False)
    
   
