@@ -44,6 +44,7 @@ def train(epoch,loader,model,optimizer):
     total_loss = 0.0
     count = 0
     len_train = len(loader) 
+    t = time.time()
     for i ,( adj,features,labels )  in enumerate(loader):
           # cuda()
           features = features.cuda()
@@ -53,25 +54,32 @@ def train(epoch,loader,model,optimizer):
           # model()
           output = model(features, adj)
           # loss()
-          a,b,c = output.shape
-          output = output.view(-1,c)
-          labels = labels.view(-1)
-          loss_train = F.nll_loss(output, labels)
+          #a,b,c = output.shape
+          #output = output.view(-1,c)
+          #labels = labels.view(-1)
+          loss_train = F.nll_loss(output, labels[0])
           
           # optimize()
           # update()
+          count += 1
+          total_loss += loss_train
+
           if i%40 == 0:
-             print("# {}/{} loss : {}".format(i,len_train,loss_train)) 
+             print("# {}/{} loss : {} , time: {} , ETA:  {}".format(i,len_train,total_loss/count,time.time()-t, (len_train-i)/40.0 * (time.time()-t) ))
+             t = time.time()
           
           loss_train.backward()
           optimizer.step()
           
-          count += 1
-          total_loss += loss_train
 
 
     return (total_loss/count)
+
+
+
 def validate(epoch,loader,model):
+
+
    
     model.eval()
     total_loss= 0.0
@@ -79,26 +87,30 @@ def validate(epoch,loader,model):
     count = 0
     val_len = len(loader)    
     
+    t = time.time()
 
-    for i in range(val_len):
         
+    for i ,( adj,features,labels )  in enumerate(loader):
           # cuda() 
-          adj,features,labels = loader[i] 
           features = features.cuda()
           adj = adj.cuda()
           labels = labels.cuda()
           # model()
           output = model(features, adj)
+          labels = labels.view(-1)
           # loss()
           val_train = F.nll_loss(output, labels)
           acc_val = accuracy(output, labels)
 
-          if i%40 == 0:
-             print("# {} val loss : {}, acc val:{}".format(i,val_train,acc_val)) 
-
           count += 1
           total_loss += val_train
           total_acc += acc_val
+
+          if i%40 == 0:
+             #print("# {} val loss : {}, acc val:{}".format(i,val_train,acc_val)) 
+             print("# {}/{} loss : {} , AVG acc : {}, time: {} , ETA:  {}".format(i,val_len,float(total_loss)/count,total_acc/count,time.time()-t, (val_len-i)/40.0 * (time.time()-t) ))
+             t = time.time()
+
 
     return total_loss/count,total_acc/count
 
@@ -115,19 +127,23 @@ if args.cuda:
 # Load data
 #adj, features, labels, idx_train, idx_val, idx_test = load_data()A
 loader = HopkinsDataset(window = 3 , root_dir = '../../train_dataset_03/' )
-val_loader = HopkinsDataset(window = 3 , root_dir = '../../val_dataset_03/' )
+test_loader = HopkinsDataset(window = 3 , root_dir = '../../val_dataset_03/' )
 
 dataset_len = len(loader)
+split = int(dataset_len/4)
+indices = list(range(dataset_len))
 
+validation_idx = np.random.choice(indices, size=split, replace=False)
+train_idx = list(set(indices) - set(validation_idx))
 
-#train_sampler = SubsetRandomSampler(train_idx)
-#validation_sampler = SubsetRandomSampler(validation_idx)
+train_sampler = SubsetRandomSampler(train_idx)
+validation_sampler = SubsetRandomSampler(validation_idx)
 
 train_loader = torch.utils.data.DataLoader(loader, 
-                batch_size=1,num_workers=4 )
+                batch_size=1,num_workers=6, shuffle=False,sampler=train_sampler )
 
-#validation_loader = torch.utils.data.DataLoader(loader, 
- #               batch_size=2, sampler=validation_sampler)
+val_loader = torch.utils.data.DataLoader(loader, 
+                batch_size=1,num_workers=6, shuffle=False,sampler=validation_sampler)
 
 
 model = GCN(nfeat=100,
@@ -172,11 +188,14 @@ if args.cuda:
 # Train model
 t_total = time.time()
 best_val_loss = 100000
+
+
 for epoch in range(args.epochs):
     print(" epoch # {}".format(epoch))
 
     train_loss = train(epoch,train_loader,model,optimizer)
     print(" Train Loss = {}".format(train_loss))
+
     val_loss, acc = validate(epoch,val_loader,model)
     print(" val Loss = {}, accuracy : {}".format(val_loss,acc))
 
@@ -189,7 +208,7 @@ for epoch in range(args.epochs):
     save_checkpoint({
             'epoch': epoch + 1,
             'state_dict': model.state_dict(),
-            'best_prec1': 0,
+            'best_val': val_loss,
             'optimizer' : optimizer.state_dict(),
         }, is_best)
  

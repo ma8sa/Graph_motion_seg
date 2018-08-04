@@ -15,4 +15,7 @@ class GCN(nn.Module):
         x = F.relu(self.gc1(x, adj))
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.gc2(x, adj)
+        a,b,c = x.shape
+        x = x.view(-1,c)
+        #x = (F.log_softmax(x,dim=0))
         return F.log_softmax(x)
