@@ -17,5 +17,7 @@ class GCN(nn.Module):
         x = self.gc2(x, adj)
         a,b,c = x.shape
         x = x.view(-1,c)
+        y = x.view(9,-1,c)
+        y = y.mean(0)
         #x = (F.log_softmax(x,dim=0))
-        return F.log_softmax(x)
+        return F.log_softmax(y)

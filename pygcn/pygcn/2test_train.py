@@ -28,15 +28,15 @@ parser.add_argument('--lr', type=float, default=0.01,
                     help='Initial learning rate.')
 parser.add_argument('--weight_decay', type=float, default=5e-4,
                     help='Weight decay (L2 loss on parameters).')
-parser.add_argument('--hidden', type=int, default=16,
+parser.add_argument('--hidden', type=int, default=64,
                     help='Number of hidden units.')
 parser.add_argument('--dropout', type=float, default=0.5,
                     help='Dropout rate (1 - keep probability).')
 
-def save_checkpoint(state, is_best, filename='test_checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, filename='2test_checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, 'test_model_best.pth.tar')
+        shutil.copyfile(filename, '2test_model_best.pth.tar')
 
 def train(epoch,loader,model,optimizer):
     model.train()
@@ -58,14 +58,15 @@ def train(epoch,loader,model,optimizer):
           #output = output.view(-1,c)
           labels = labels.view(-1)
           loss_train = F.nll_loss(output, labels)
+          
           # optimize()
           # update()
           count += 1
           total_loss += loss_train
 
-          if i%40 == 0:
-             print("# {}/{} loss : {} , time: {} , ETA:  {}".format(i,len_train,total_loss/count,time.time()-t, (len_train-i)/40.0 * (time.time()-t) ))
-             t = time.time()
+          #if i%40 == 0:
+           #  print("# {}/{} loss : {} , time: {} , ETA:  {}".format(i,len_train,total_loss/count,time.time()-t, (len_train-i)/40.0 * (time.time()-t) ))
+            # t = time.time()
           
           loss_train.backward()
           optimizer.step()
@@ -123,12 +124,11 @@ torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
-print("loading  ")
 # Load data
 #adj, features, labels, idx_train, idx_val, idx_test = load_data()A
-loader = HopkinsDataset(window = 10 , root_dir = '../../train_dataset_10/' )
-test_loader = HopkinsDataset(window = 10 , root_dir = '../../val_dataset_10/' )
-print("loading  ")
+loader = HopkinsDataset(window = 3 , root_dir = '../../train_dataset_03/' )
+test_loader = HopkinsDataset(window = 3 , root_dir = '../../val_dataset_03/' )
+
 dataset_len = len(loader)
 split = int(dataset_len/4)
 indices = list(range(dataset_len))
@@ -174,7 +174,6 @@ optimizer = optim.Adam(model.parameters(),
  # input()
 
 
-model.cuda()
 if args.cuda:
     model.cuda()
     #features = features.cuda()

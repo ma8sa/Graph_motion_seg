@@ -45,6 +45,7 @@ def make_adj(x,y,window,sigma=50.0):
     val = [1.0]
     N = n * (window-1)
     adj = np.zeros((N,N),dtype=np.float64)
+    #adj = torch.zeros([N, N], dtype=torch.float64).cuda()
     for i in range(N):
         for j in range(N):
 
@@ -63,10 +64,19 @@ def make_adj(x,y,window,sigma=50.0):
                
             elif frame_i == frame_j:
                # exp(-1* euc_dist(x,y,x,y)/sigma)
-               euc1 =euc_dist(x[idx_i,frame_i],y[idx_i,frame_i],x[idx_i,frame_i+1],y[idx_i,frame_i+1] )
-               euc2 =euc_dist(x[idx_j,frame_j],y[idx_j,frame_j],x[idx_j,frame_j+1],y[idx_j,frame_j+1] )
+             #  euc1 =euc_dist(x[idx_i,frame_i],y[idx_i,frame_i],x[idx_i,frame_i+1],y[idx_i,frame_i+1] )
+              # euc2 =euc_dist(x[idx_j,frame_j],y[idx_j,frame_j],x[idx_j,frame_j+1],y[idx_j,frame_j+1] )
 
-               tmp = np.exp( ((-1) * ((euc1 - euc2)**2)) / sigma )
+               Xi = x[idx_i,frame_i] - x[idx_i,frame_j+1]
+               Yi = y[idx_i,frame_i] - y[idx_i,frame_j+1]
+
+               Xj = x[idx_j,frame_i] - x[idx_j,frame_i+1]
+               Yj = y[idx_j,frame_i] - y[idx_j,frame_i+1]
+               
+               d2 = euc_dist(Xi,Yi,Xj,Yj)
+                
+               #tmp = np.exp( ((-1) * ((euc1 - euc2)**2)) / sigma )
+               tmp = np.exp( ((-1) * ((d2)**2)) / sigma )
                adj[i,j] = tmp
                #tmp = 0.0 
                #ind.append([i,j])
@@ -104,13 +114,15 @@ class HopkinsDataset(Dataset):
           y = tmp[:,1::2]
 
           features = torch.FloatTensor(np.ones((nf,100)))
+          o_features = torch.FloatTensor(np.ones((nf,100)))
           for _ in range(self.window-2): 
-             features = torch.cat((features,features), 0)
-             gt = np.concatenate((gt,gt),axis=0)
+             features = torch.cat((features,o_features), 0)
+             #gt = np.concatenate((gt,gt),axis=0)
           #labels = encode_onehot(gt)
           gt = gt -1
+          gt[ gt[:] < 0 ] = 0
+          gt[ gt[:] > 2 ] = 2
           labels = torch.LongTensor(gt)
-          
           adj = make_adj(x,y,self.window)
 
           # make adj matrix 
