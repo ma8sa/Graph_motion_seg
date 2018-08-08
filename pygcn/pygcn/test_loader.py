@@ -101,31 +101,34 @@ class HopkinsDataset(Dataset):
 
       def __len__(self):
          
-         return len(os.listdir(self.root_dir))-1
+         return sum(1 for x in os.listdir(self.root_dir) if x.endswith('.npz'))
 
 
       def __getitem__(self,idx):
           
-          tmp = np.genfromtxt(self.root_dir + str(idx).zfill(6) + '.txt')
-          nf , _ = tmp.shape 
-          gt = tmp[:,2*self.window] 
-          tmp = tmp[:,:2*self.window] 
-          x = tmp[:,0::2]
-          y = tmp[:,1::2]
-
-          features = torch.FloatTensor(np.ones((nf,100)))
-          o_features = torch.FloatTensor(np.ones((nf,100)))
-          for _ in range(self.window-2): 
-             features = torch.cat((features,o_features), 0)
+          #tmp = np.genfromtxt(self.root_dir + str(idx).zfill(6) + '.txt')
+          gt = np.genfromtxt(self.root_dir + str(idx).zfill(6) + '_gt.txt')
+          nf  = gt.shape 
+          #gt = tmp[:,2*self.window] 
+          #tmp = tmp[:,:2*self.window] 
+          #x = tmp[:,0::2]
+          #y = tmp[:,1::2]
+          st_label = gt.max() - 1
+          
+          features = torch.FloatTensor(np.ones((nf[0]*(self.window-1),100)))
              #gt = np.concatenate((gt,gt),axis=0)
           #labels = encode_onehot(gt)
+
           gt = gt -1
           gt[ gt[:] < 0 ] = 0
           gt[ gt[:] > 2 ] = 2
+          gt = [0 if g == st_label else 1 for g in gt ]
+          ad = sp.load_npz(self.root_dir + str(idx).zfill(6) + '_adj.npz').todense()
+          #adj = adj.todense()
+          adj = torch.FloatTensor(ad)
           labels = torch.LongTensor(gt)
-          adj = make_adj(x,y,self.window)
-
+          #adj = make_adj(x,y,self.window)
+          del ad,gt
           # make adj matrix 
           # experiment 1 features just has 1 in it
-          
           return adj,features,labels
