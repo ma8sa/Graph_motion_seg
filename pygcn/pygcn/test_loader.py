@@ -101,7 +101,7 @@ class HopkinsDataset(Dataset):
 
       def __len__(self):
          
-         return sum(1 for x in os.listdir(self.root_dir) if x.endswith('.npz'))
+         return sum(1 for x in os.listdir(self.root_dir) if x.endswith('an.npz'))
 
 
       def __getitem__(self,idx):
@@ -115,20 +115,47 @@ class HopkinsDataset(Dataset):
           #y = tmp[:,1::2]
           st_label = gt.max() - 1
           
-          features = torch.FloatTensor(np.ones((nf[0]*(self.window-1),100)))
+          
+          
+          features = (np.genfromtxt(self.root_dir + str(idx).zfill(6) + '_f2.txt'))
+          o_features = (np.genfromtxt(self.root_dir + str(idx).zfill(6) + '_f2.txt'))
+          #features = torch.FloatTensor(np.ones((nf[0]*(self.window-1),28)))
              #gt = np.concatenate((gt,gt),axis=0)
           #labels = encode_onehot(gt)
-
+          #features = gt
+          #inds = [ i for i,x in enumerate(features) if x <= st_label]
+          
+         # s_inds = np.random.choice(inds, int(len(inds)/2) , replace=False )
+         # for i in s_inds: 
+         #     features[i] = 0.5
+          
+         # features[ features[:] < st_label ] = 0.5
+         # o_features = features
+           
+          for i in range(self.window-2):
+               features = np.concatenate((features,o_features),axis=0)
+          
+          features = torch.FloatTensor(features) 
+          #features.unsqueeze_(1)
+              
+          
           gt = gt -1
+          
           gt[ gt[:] < 0 ] = 0
           gt[ gt[:] > 2 ] = 2
           gt = [0 if g == st_label else 1 for g in gt ]
           ad = sp.load_npz(self.root_dir + str(idx).zfill(6) + '_adj.npz').todense()
+          ad_an = sp.load_npz(self.root_dir + str(idx).zfill(6) + '_adj_an.npz').todense()
+          
           #adj = adj.todense()
+           
           adj = torch.FloatTensor(ad)
+          adj = to_sparse(adj) 
+          adj_an = torch.FloatTensor(ad_an)
+          adj_an = to_sparse(adj_an) 
           labels = torch.LongTensor(gt)
           #adj = make_adj(x,y,self.window)
           del ad,gt
           # make adj matrix 
           # experiment 1 features just has 1 in it
-          return adj,features,labels
+          return adj,adj_an,features,labels

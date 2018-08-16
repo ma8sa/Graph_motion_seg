@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from pygcn.utils import load_data, accuracy
-from test_models import GCN
+from new_models import GCN
 from test_loader import HopkinsDataset,to_sparse
 from torch.utils.data.sampler import SubsetRandomSampler
 from tensorboardX import SummaryWriter
@@ -46,10 +46,10 @@ def memReport():
 #    input()
 
 
-def save_checkpoint(state, is_best, filename='test_checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, filename='new_test_checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, 'test_model_best.pth.tar')
+        shutil.copyfile(filename, 'new_test_model_best.pth.tar')
 
 def train(epoch,loader,model,optimizer,writer):
     model.train()
@@ -61,7 +61,7 @@ def train(epoch,loader,model,optimizer,writer):
     #for i ,( adj,features,labels )  in enumerate(loader):
     for i  in range(len(loader)):
           # cuda()
-          adj,adj_an,features,labels = loader[i]
+          adj,features,labels = loader[i]
           #adj.unsqueeze_(0)
           #features.unsqueeze_(0)
          
@@ -72,37 +72,21 @@ def train(epoch,loader,model,optimizer,writer):
           adj = adj.cuda()
           labels = labels.cuda()
           # model()
-          output = model(features,features ,adj,adj_an)
+          output = model(features, adj)
            
           # loss()
           #a,b,c = output.shape
           #output = output.view(-1,c)
-          W = torch.FloatTensor([ 1 , 1.5 ]).cuda()
-         
+          W = torch.FloatTensor([ 1 , 1.4 ]).cuda()
+          loss_train = F.nll_loss(output, labels,W)
           a = torch.argmax( output,dim=1)
           b = torch.eq(a,labels)
           c = (torch.sum(b))
           d = labels.shape
-          non_zero = (torch.nonzero(a).size(0)*100)/d[0]
-           
-
           acc = (c.data * 100)/d[0]
           total_acc = total_acc + acc.data
           # optimize()
           # update()
-          max_f = 0
-          non_zero_l = (torch.nonzero(labels).size(0)*100)/d[0]
-         
-          if non_zero_l < 50:
-              max_f = 1
-  
-          inds = [labels[:] == max_f]
-
-          loss_train_2 = F.nll_loss(output[inds], labels[inds])
-          loss_train_1 = F.nll_loss(output, labels,W)
-          
-          loss_train = loss_train_1 + loss_train_2 
-
           total_loss =total_loss + loss_train.data 
           count += 1
           #total_loss += loss_train
@@ -115,6 +99,7 @@ def train(epoch,loader,model,optimizer,writer):
           
           loss_train.backward()
          
+          non_zero = (torch.nonzero(a).size(0)*100)/d[0]
           for j,x in enumerate(model.parameters()):
                g = (torch.nonzero(x.grad.data).size(0))
                writer.add_scalar('non_zero_grad_layer_'+str(j),g ,(epoch*len_train + i) )
@@ -180,7 +165,6 @@ def validate(epoch,loader,model,writer):
     model.eval()
     total_loss= 0.0
     total_acc = 0.0
-    new_total_acc = 0.0
     count = 0
     
     t = time.time()
@@ -189,7 +173,7 @@ def validate(epoch,loader,model,writer):
     #for i ,( adj,features,labels )  in enumerate(loader):
     for i  in range(len(loader)):
           # cuda()
-          adj,adj_an,features,labels = loader[i]
+          adj,features,labels = loader[i]
          #adj.unsqueeze_(0)
           #features.unsqueeze_(0)
           # cuda() 
@@ -197,7 +181,7 @@ def validate(epoch,loader,model,writer):
           adj = adj.cuda()
           labels = labels.cuda()
           # model()
-          output = model(features,features, adj,adj_an)
+          output = model(features, adj)
           # loss()
           val_train = F.nll_loss(output, labels)
           a = torch.argmax( output,dim=1)
@@ -208,36 +192,13 @@ def validate(epoch,loader,model,writer):
           total_acc += acc.data
           total_loss += val_train.data 
           count += 1
-          
-          max_f = 0
-       
 
-
-
-          non_zero = (torch.nonzero(a).size(0)*100)/d[0]
-          non_zero_l = (torch.nonzero(labels).size(0)*100)/d[0]
-         
-          if non_zero_l < 50:
-              max_f = 1
-          
-          inds = [labels[:] == max_f]
-          n_b = torch.eq(a[inds] , labels[inds])
-          n_c = torch.sum(n_b)
-          N_acc = (n_c.data * 100)/d[0]
-          new_total_acc += N_acc.data
-
-          if i%4 == 0 and i > 0:
-            print("# {}/{} loss : {} , AVG acc : {}, time: {} , ETA:  {}".format(i,val_len,total_loss/count,total_acc/count,time.time()-t, (val_len-i)/4.0 * (time.time()-t) ))
-            writer.add_scalar('new_val_acc', (new_total_acc.data)/count,(epoch*val_len + i)/4.0 )
+          if i%10 == 0:
+            print("# {}/{} loss : {} , AVG acc : {}, time: {} , ETA:  {}".format(i,val_len,total_loss/count,total_acc/count,time.time()-t, (val_len-i)/40.0 * (time.time()-t) ))
+            a = torch.argmax( output,dim=1)
             print(labels)
-            print(" output ")
+            print(" one ")
             print(a) 
- 
-          for j,x in enumerate(model.parameters()):
-               g = (torch.nonzero(x.grad.data).size(0))
-               writer.add_scalar('val_non_zero_grad_layer_'+str(j),g ,(epoch*val_len + i) )
-               if non_zero > 0 and non_zero < 100:   
-                 writer.add_scalar(('val_non_zero_output_'),non_zero ,(epoch*val_len + i) )
             
              #t = time.time()
 
@@ -281,7 +242,7 @@ val_loader = torch.utils.data.DataLoader(loader,
                 batch_size=1,num_workers=8, shuffle=False,sampler=validation_sampler)
 
 
-model = GCN(nfeat=3,
+model = GCN(nfeat=28,
             nhid=args.hidden,
             nclass=2,
             dropout=args.dropout)
@@ -329,21 +290,10 @@ for epoch in range(args.epochs):
     print(" epoch # {}".format(epoch))
 
     #train_loss  = train(epoch,loader,model,optimizer)
-    print("pre training mem ")
-    print(torch.cuda.max_memory_allocated()/8000000) 
     #input()
-    a = list(model.parameters())[0].clone()
      
-    for c in (list(model.parameters()) ):
-        print(c.grad)
-        print(c.shape)
     train(epoch,loader,model,optimizer,writer)
-    for c in (list(model.parameters()) ):
-        print(torch.nonzero(c.grad).size(0))
-        print(c.shape)
     #print("post training mem ")
-    print(torch.cuda.max_memory_allocated()/1000000) 
-    b = list(model.parameters())[0].clone()
    
 #    print(" Train Loss = {} ".format(train_loss))
     val_loss = 0.0

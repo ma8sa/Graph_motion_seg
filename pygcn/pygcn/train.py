@@ -40,11 +40,6 @@ if args.cuda:
 
 # Load data
 adj, features, labels, idx_train, idx_val, idx_test = load_data()
-tt = adj 
-print(tt)
-print(tt.size())
-print(tt.type())
-input()
 
 # Model and optimizer
 model = GCN(nfeat=features.shape[1],
@@ -69,13 +64,12 @@ def train(epoch):
     model.train()
     optimizer.zero_grad()
     output = model(features, adj)
-    print(output.shape)
-    input()
-    print(labels.shape)
-    input()
     loss_train = F.nll_loss(output[idx_train], labels[idx_train])
     acc_train = accuracy(output[idx_train], labels[idx_train])
     loss_train.backward()
+
+    print(list(model.parameters())[0].grad )
+    input()
     optimizer.step()
 
     if not args.fastmode:
@@ -85,6 +79,11 @@ def train(epoch):
         output = model(features, adj)
 
     loss_val = F.nll_loss(output[idx_val], labels[idx_val])
+    a = torch.argmax(output[idx_val],dim=1)
+    print(a)
+    
+    print(len(a[ a[:] == 2]))
+    input()
     acc_val = accuracy(output[idx_val], labels[idx_val])
     print('Epoch: {:04d}'.format(epoch+1),
           'loss_train: {:.4f}'.format(loss_train.data[0]),
